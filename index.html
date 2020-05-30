@@ -2,8 +2,23 @@
     <head>
         <meta charset="UTF-8">
         <title>Perlin Noise</title>
+        <script src="lib/twgl-full.min.js"></script>
     </head>
     <body>
+        <canvas width=1280 height=720 id="gl"></canvas>
+        <script id="vs" type="notjs">
+            attribute vec4 a_position;
+            uniform mat4 u_mvp;
+            void main() {
+                gl_Position = u_mvp * a_position;
+            }
+        </script>
+        <script id="fs" type="notjs">
+            precision mediump float;
+            void main() {
+                gl_FragColor = vec4(1, 0, 0.5, 1);
+            }
+        </script>
         <script src="main.js"></script>
     </body>
 </html>

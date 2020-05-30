@@ -78,3 +78,55 @@ function perlin(x, y) {
 
     return lerp(ix0, ix1, fy);
 }
+
+const gl = document.getElementById("gl").getContext("webgl");
+const programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+
+const projection_matrix = twgl.m4.perspective(0.5, gl.canvas.width / gl.canvas.height, 0.1, 100);
+const view_matrix = twgl.m4.translation([-14.0, -5, -13.5]);
+const view_projection_matrix = twgl.m4.multiply(projection_matrix, view_matrix);
+const model_matrix = twgl.m4.rotationX(-1);
+const mvp_matrix = twgl.m4.multiply(view_projection_matrix, model_matrix);
+
+
+function render() {
+    const drawObjects = [];
+
+    let noise_grid = [];
+    for (let y = 0; y < 21; y += 0.1) {
+        let line = [];
+        for (let x = 0; x < 30; x += 0.1) {
+            line.push([x, y, perlin(x, y)]);
+        }
+        noise_grid.push(line);
+    }
+
+    noise_grid.forEach(function (line) {
+        let l = {
+            a_position: {
+                numComponents: 3,
+                data: line.flat()
+            }
+        };
+
+        drawObjects.push({
+            programInfo: programInfo,
+            bufferInfo: twgl.createBufferInfoFromArrays(gl, l),
+            uniforms: {
+                u_mvp: mvp_matrix
+            },
+            type: gl.LINE_STRIP
+        });
+    });
+
+    twgl.resizeCanvasToDisplaySize(gl.canvas);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    gl.clearColor(0, 0, 0, 0.5);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.useProgram(programInfo.program);
+    twgl.drawObjectList(gl, drawObjects);
+}
+
+requestAnimationFrame(render);

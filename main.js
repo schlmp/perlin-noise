@@ -82,26 +82,59 @@ function perlin(x, y) {
 const gl = document.getElementById("gl").getContext("webgl");
 const programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
 
-const projection_matrix = twgl.m4.perspective(0.5, gl.canvas.width / gl.canvas.height, 0.1, 100);
-const view_matrix = twgl.m4.translation([-14.0, -5, -13.5]);
-const view_projection_matrix = twgl.m4.multiply(projection_matrix, view_matrix);
-const model_matrix = twgl.m4.rotationX(-1);
-const mvp_matrix = twgl.m4.multiply(view_projection_matrix, model_matrix);
+const uniforms = {
+    u_mvp: twgl.m4.idendity
+};
 
+const X_OFFSET = 0.1;
+const Z_OFFSET = 0.1;
 
-function render() {
-    const drawObjects = [];
-
-    let noise_grid = [];
-    for (let y = 0; y < 21; y += 0.1) {
-        let line = [];
-        for (let x = 0; x < 30; x += 0.1) {
-            line.push([x, y, perlin(x, y)]);
-        }
-        noise_grid.push(line);
+const noise_grid = [];
+for (let z = 0; z < 20; z += Z_OFFSET) {
+    let line = [];
+    for (let x = 0; x < 30; x += X_OFFSET) {
+        line.push([x, perlin(x, z), z]);
     }
+    noise_grid.push(line);
+}
 
-    noise_grid.forEach(function (line) {
+const drawObjects = [];
+noise_grid.forEach(function (line) {
+    let l = {
+        a_position: {
+            numComponents: 3,
+            data: line.flat()
+        }
+    };
+
+    drawObjects.push({
+        programInfo: programInfo,
+        bufferInfo: twgl.createBufferInfoFromArrays(gl, l),
+        type: gl.LINE_STRIP
+    });
+});
+
+let cur_end = 20;
+
+function render(time) {
+    time *= 0.004;
+
+    const projection_matrix = twgl.m4.perspective(0.5, gl.canvas.width / gl.canvas.height, 0.1, 50);
+    const view_matrix = twgl.m4.lookAt([15, 5, -4 + time], [15, 0, 6 + time], [0, 1, 0]);
+    twgl.m4.inverse(view_matrix, view_matrix);
+    const view_projection_matrix = twgl.m4.multiply(projection_matrix, view_matrix);
+    const model_matrix = twgl.m4.rotationX(0);
+    const mvp_matrix = twgl.m4.multiply(view_projection_matrix, model_matrix);
+
+    for (let i = cur_end; i < parseInt((time + 21) / Z_OFFSET) * Z_OFFSET; i += Z_OFFSET) {
+        let line = [];
+        for (let x = 0; x < 30; x += X_OFFSET) {
+            line.push([x, perlin(x, cur_end), cur_end]);
+        }
+
+        noise_grid.push(line);
+        noise_grid.shift();
+
         let l = {
             a_position: {
                 numComponents: 3,
@@ -112,12 +145,12 @@ function render() {
         drawObjects.push({
             programInfo: programInfo,
             bufferInfo: twgl.createBufferInfoFromArrays(gl, l),
-            uniforms: {
-                u_mvp: mvp_matrix
-            },
             type: gl.LINE_STRIP
         });
-    });
+        drawObjects.shift();
+
+        cur_end += Z_OFFSET;
+    }
 
     twgl.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -125,8 +158,12 @@ function render() {
     gl.clearColor(0, 0, 0, 0.5);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
+    uniforms.u_mvp = mvp_matrix;
+
     gl.useProgram(programInfo.program);
+    twgl.setUniforms(programInfo, uniforms);
     twgl.drawObjectList(gl, drawObjects);
+    requestAnimationFrame(render);
 }
 
 requestAnimationFrame(render);

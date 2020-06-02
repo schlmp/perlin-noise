@@ -155,7 +155,7 @@ function render(time) {
     twgl.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    gl.clearColor(0, 0, 0, 0.5);
+    gl.clearColor(0, 0, 0, 0.85);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     uniforms.u_mvp = mvp_matrix;
